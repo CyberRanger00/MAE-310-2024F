@@ -40,3 +40,54 @@ for case_idx = 1:num_cases                %这是循环的开头
             IEN(ee, aa) = (ee - 1) * pp + aa;
         end
     end
+
+    % 设置 the ID array 
+    ID = 1 : n_np;
+    ID(end) = 0; %  Dirichlet condition
+    
+    % 设置Quadrature（使用10点Gauss quadrature）
+    n_int = 10;
+    [xi, weight] = Gauss(n_int, -1, 1);
+    
+    % 配置 the stiffness matrix 与 load vector
+    n_eq = n_np - 1;                       % 方程个数（不含Dirichlet节点）
+    K = spalloc(n_eq, n_eq, (2*pp+1)*n_eq); % Sparse stiffness matrix
+    F = zeros(n_eq, 1);                     % Load vector
+    
+    % 装配the stiffness matrix 与 load vector
+    for ee = 1 : n_el
+        k_ele = zeros(n_en, n_en); % Element stiffness matrix
+        f_ele = zeros(n_en, 1);    % Element load vector
+        
+        x_ele = x_coor(IEN(ee,:)); % Coordinates of the current element's nodes
+
+        % Quadrature loop
+        for qua = 1 : n_int
+            % 初始化
+            dx_dxi = 0.0;
+            x_l = 0.0;
+            
+            % 在 quadrature point 计算 shape functions 及其导数 
+            for aa = 1 : n_en
+                N_a = PolyShape(pp, aa, xi(qua), 0);    % Shape function的值
+                dN_a_dxi = PolyShape(pp, aa, xi(qua), 1);% Shape functionn 的导数
+                x_l    = x_l    + x_ele(aa) * N_a;      % Physical coordinate
+                dx_dxi = dx_dxi + x_ele(aa) * dN_a_dxi; % Jacobian derivative
+            end
+            dxi_dx = 1.0 / dx_dxi; % Inverse of Jacobian
+            
+            % 组装 element load vector 与 stiffness matrix
+            for aa = 1 : n_en
+                N_a = PolyShape(pp, aa, xi(qua), 0);       % Shape function 的值
+                dN_a_dxi = PolyShape(pp, aa, xi(qua), 1);  % Shape function 的导数
+                F_elem_increment = weight(qua) * N_a * f(x_l) * dx_dxi;
+                f_ele(aa) = f_ele(aa) + F_elem_increment;
+                
+                for bb = 1 : n_en
+                    dN_b_dxi = PolyShape(pp, bb, xi(qua), 1); % Shape function 的导数
+                    K_ele_increment = weight(qua) * dN_a_dxi * dN_b_dxi * dxi_dx;
+                    k_ele(aa, bb) = k_ele(aa, bb) + K_ele_increment;
+                end
+            end
+        end
+        
