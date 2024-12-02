@@ -9,32 +9,45 @@ f = @(x) -20*x.^3; % 给的source term
 g = 1.0;           % u = g at x = 1 (Dirichlet)
 h_bc = 0.0;        % -du/dx = h at x = 0 (Neumann)
 
-%为了迭代方便，定义一下number of element
-n_el_array = [2, 4, 6, 8, 10, 12, 14, 16];
-num_cases = length(n_el_array);
-
-%初始化数组以存储 errors 和 mesh sizes
-L2_errors = zeros(num_cases,1);
-H1_errors = zeros(num_cases,1);
-h_values = zeros(num_cases,1);
-
-% 定义要迭代的polynomial degrees 
+% 定义要迭代的polynomial degrees，移到前面来，好像在后面会导致读不出来
 p_array = [2, 3]; % 2: Quadratic, 3: Cubic
 num_p = length(p_array);
 
 
+%为了迭代方便，定义一下number of element
+n_el_array = [2, 4, 6, 8, 10, 12, 14, 16];
+num_cases = length(n_el_array);
+
+% 定义公差
+tolerances = [1e-10, 1e-8, 1e-6];
+num_tol = length(tolerances);
+
+%初始化数组以存储 errors 和 mesh sizes，这里需要更改存储类型，因为有多个degree
+L2_errors = cell(num_p,1);
+H1_errors = cell(num_p,1);
+h_values = cell(num_p,1);
 
 %现在我们要循环不同的number of element
 %这里直接复制粘贴了上一问的循环，我感觉稍微改一下就行
-for case_idx = 1:num_cases                 %这是循环的开头
-    n_el = n_el_array(case_idx);           % 当前 number of elements
-    pp = 2;                                % 多项式次数 (二次)
-    n_en = pp + 1;                         % 每个element的本地节点数量 (3)
-    n_np = n_el * pp + 1;                  % 总节点数
-    h = 1.0 / n_el;                        % Mesh size
-    h_values{p_idx}(case_idx) = h;         % 存储 mesh size
+%数值计算部分应该不需要动，因为只涉及计算，有限元解答部分是一样的，只需要多加一个for让它多算一次就行
+%好像不行，因为我们还要循环一个polynomial degree，所以需要多一个for
+for p_idx = 1:num_p
+    pp = p_array(p_idx);              % 当前 polynomial degree
+    n_en = pp + 1;                     % 每个element的本地节点数量
+    L2_errors{p_idx} = zeros(num_cases,1);
+    H1_errors{p_idx} = zeros(num_cases,1);
+    h_values{p_idx} = zeros(num_cases,1);%存储errors和mesh size
     
-    % Setup the mesh
+    fprintf('\nProcessing Polynomial Degree: pp = %d\n', pp);
+    
+% 对每个number of element循环
+for     case_idx = 1:num_cases
+        n_el = n_el_array(case_idx);      % 当前elements数量
+        n_np = n_el * pp +1;              % 总节点数
+        h = 1.0 / n_el;                    % Mesh size
+        h_values{p_idx}(case_idx) = h;    % 存储mesh size
+      
+    % 设置网格
     x_coor = linspace(0,1,n_np);           % 节点坐标
     
     % 定义 the IEN matrix
@@ -45,7 +58,7 @@ for case_idx = 1:num_cases                 %这是循环的开头
         end
     end
 
-    % 设置 the ID array 
+    % 设置 the ID array,这里不用改
     ID = 1 : n_np;
     ID(end) = 0; %  Dirichlet condition
     
@@ -58,7 +71,7 @@ for case_idx = 1:num_cases                 %这是循环的开头
     K = spalloc(n_eq, n_eq, (2*pp+1)*n_eq); % Sparse stiffness matrix
     F = zeros(n_eq, 1);                     % Load vector
     
-    % 装配the stiffness matrix 与 load vector
+    % 装配the stiffness matrix 与 load vector，这个整个应该没问题，高阶也不影响计算过程
     for ee = 1 : n_el
         k_ele = zeros(n_en, n_en); % Element stiffness matrix
         f_ele = zeros(n_en, 1);    % Element load vector
@@ -165,8 +178,8 @@ for case_idx = 1:num_cases                 %这是循环的开头
             du_ex = du_exact(x_q);
             
             % 计算误差
-            L2_error = L2_error + weight_err(qua) * (u_h - u_ex)^2 * dx_dxi;
-            H1_error = H1_error + weight_err(qua) * (du_h_dx - du_ex)^2 * dx_dxi;
+             L2_error = L2_error + weight_err(qua) * (u_h - u_ex)^2 * dx_dxi;
+             H1_error = H1_error + weight_err(qua) * (du_h_dx - du_ex)^2 * dx_dxi;
         end
     end
     
@@ -206,10 +219,12 @@ for case_idx = 1:num_cases                 %这是循环的开头
         end
     end
     
-    % 计算 relative errors
-    L2_errors(case_idx) = sqrt(L2_error) / sqrt(L2_exact);
-    H1_errors(case_idx) = sqrt(H1_error) / sqrt(H1_exact);
-    
-    fprintf('n_el = %d, h = %.5f, L2_error = %.5e, H1_error = %.5e\n', ...
-            n_el, h, L2_errors(case_idx), H1_errors(case_idx));
+    % 前面的部分都只是数值计算，完全不需要更改，只需要把数据类型变换一下以兼容两个polynomial degrees就好
+    % 计算 relative errors，这里需要把数据类型变更一下，不然跑不动
+        L2_errors{p_idx}(case_idx) = sqrt(L2_error) / sqrt(L2_exact);
+        H1_errors{p_idx}(case_idx) = sqrt(H1_error) / sqrt(H1_exact);
+        
+    fprintf('pp = %d, n_el = %d, h = %.5f, L2_error = %.5e, H1_error = %.5e\n', ...
+             pp, n_el, h, L2_errors{p_idx}(case_idx), H1_errors{p_idx}(case_idx));
+end
 end
