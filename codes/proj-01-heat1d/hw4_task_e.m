@@ -23,6 +23,10 @@ num_cases = length(n_el_array);
 tolerances = [1e-10, 1e-8, 1e-6];
 num_tol = length(tolerances);
 
+% 定义要进行实验的quadrature points的个数
+quad_points_array = [1, 2, 3, 4, 5, 6];
+num_quad = length(quad_points_array);
+
 % 初始化cell arrays以储存误差，mesh size以及公差结果，这里不再需要cell，因为不用循环polynomial degrees
 L2_errors = zeros(num_quad, num_cases);
 H1_errors = zeros(num_quad, num_cases);
@@ -32,10 +36,6 @@ GMRES_iterations = zeros(num_quad, num_cases); % 存储公差信息
 
 % 初始化存储
 GMRES_iterations = zeros(num_quad, num_cases);
-
-% 定义要进行实验的quadrature points的个数
-quad_points_array = [1, 2, 3, 4, 5, 6];
-num_quad = length(quad_points_array);
 
 % 为了画图方便，定义一下颜色和标志
 colors = {'b','g','r','c','m','k'};    
@@ -55,15 +55,15 @@ for     case_idx = 1:num_cases
         n_el = n_el_array(case_idx);      % 当前elements数量
         n_np = n_el * pp +1;              % 总节点数
         h = 1.0 / n_el;                    % Mesh size
-        h_values{p_idx}(case_idx) = h;    % 存储mesh size
+        h_values(q_idx, case_idx) = h;    % 存储mesh size
       
     % 设置网格
     x_coor = linspace(0,1,n_np);           % 节点坐标
     
     % 定义 the IEN matrix
-    IEN = zeros(n_el, n_en);
+    IEN = zeros(n_el, pp + 1);
     for ee = 1 : n_el
-        for aa = 1 : n_en
+        for aa = 1 : (pp + 1)
             IEN(ee, aa) = (ee - 1) * pp + aa;
         end
     end
@@ -72,9 +72,8 @@ for     case_idx = 1:num_cases
     ID = 1 : n_np;
     ID(end) = 0; %  Dirichlet condition
     
-    % 设置Quadrature（使用10点Gauss quadrature）
-    n_int = 10;
-    [xi, weight] = Gauss(n_int, -1, 1);
+    % 设置Quadrature(这里是循环的quadrature point数，所以不用定义点数)
+   [xi, weight] = Gauss(n_quad, -1, 1);
     
     % 配置 the stiffness matrix 与 load vector
     n_eq = n_np - 1;                       % 方程个数（不含Dirichlet节点）
@@ -83,19 +82,19 @@ for     case_idx = 1:num_cases
     
     % 装配the stiffness matrix 与 load vector，这个整个应该没问题，高阶也不影响计算过程
     for ee = 1 : n_el
-        k_ele = zeros(n_en, n_en); % Element stiffness matrix
-        f_ele = zeros(n_en, 1);    % Element load vector
+        k_ele = zeros(pp + 1, pp + 1); % Element stiffness matrix
+        f_ele = zeros(pp + 1, 1);    % Element load vector
         
         x_ele = x_coor(IEN(ee,:)); % Coordinates of the current element's nodes
 
         % Quadrature loop
-        for qua = 1 : n_int
+        for qua = 1 : n_quad
             % 初始化
             dx_dxi = 0.0;
             x_l = 0.0;
             
             % 在 quadrature point 计算 shape functions 及其导数 
-            for aa = 1 : n_en
+            for aa = 1 : (pp + 1)
                 N_a = PolyShape(pp, aa, xi(qua), 0);    % Shape function的值
                 dN_a_dxi = PolyShape(pp, aa, xi(qua), 1);% Shape functionn 的导数
                 x_l    = x_l    + x_ele(aa) * N_a;      % Physical coordinate
@@ -104,13 +103,13 @@ for     case_idx = 1:num_cases
             dxi_dx = 1.0 / dx_dxi; % Inverse of Jacobian
             
             % 组装 element load vector 与 stiffness matrix
-            for aa = 1 : n_en
+            for aa = 1 : (pp + 1)
                 N_a = PolyShape(pp, aa, xi(qua), 0);       % Shape function 的值
                 dN_a_dxi = PolyShape(pp, aa, xi(qua), 1);  % Shape function 的导数
                 F_elem_increment = weight(qua) * N_a * f(x_l) * dx_dxi;
                 f_ele(aa) = f_ele(aa) + F_elem_increment;
                 
-                for bb = 1 : n_en
+                for bb = 1 : (pp + 1)
                     dN_b_dxi = PolyShape(pp, bb, xi(qua), 1); % Shape function 的导数
                     K_ele_increment = weight(qua) * dN_a_dxi * dN_b_dxi * dxi_dx;
                     k_ele(aa, bb) = k_ele(aa, bb) + K_ele_increment;
@@ -119,11 +118,11 @@ for     case_idx = 1:num_cases
         end
         
         % 装配成 global stiffness matrix 与 load vector
-        for aa = 1 : n_en
+        for aa = 1 : (pp + 1)
             P = ID(IEN(ee,aa)); % Global DOF for node aa
             if(P > 0)
                 F(P) = F(P) + f_ele(aa);
-                for bb = 1 : n_en
+                for bb = 1 : (pp + 1)
                     Q = ID(IEN(ee,bb)); % Global DOF for node bb
                     if(Q > 0)
                         % 确保P与Q在边界内
@@ -152,4 +151,116 @@ for     case_idx = 1:num_cases
         disp_direct = [d_direct; g];
 
      %Iterative Solver
+     % 设置GMRES 参数
+        restart = min(50, n_eq); % 确保重启次数不超过方程式数
+        maxit = 1000;            % 最大迭代次数
+        tol = 1e-10;             % 初始公差
         
+        % 解
+        [d_gmres, flag, relres, iter, resvec] = gmres(K, F, restart, tol, maxit);
+
+        % 存
+        if isscalar(iter)
+            total_iter = iter;
+        else
+            total_iter = sum(iter);
+        end
+        GMRES_iterations(q_idx, case_idx) = total_iter;
+        
+        %比较解
+        % 构造包含Dirichlet node的完整位移向量
+        disp_gmres = [d_gmres; g];
+
+
+        % 计算两种解法的差异
+        diff = disp_gmres - disp_direct;
+        error_diff = norm(diff, inf); % 最大差范数
+        fprintf('  Elements: %d, GMRES Iterations: %d, Max Diff: %.2e\n', ...
+                n_el, total_iter, error_diff);
+        
+        %计算误差，直接用前面的代码改
+            % 这是一个后处理步骤：计算 L2 and H1 errors
+    L2_error = 0.0;
+    H1_error = 0.0;
+    
+    for ee = 1 : n_el
+        x_ele = x_coor(IEN(ee,:));    % Element 的坐标
+         u_ele = disp_direct(IEN(ee,:));   % Element 解的系数
+        
+        % 使用更高阶的quadrature进行误差积分
+        [xi_err, weight_err] = Gauss(20, -1, 1); % 20-point quadrature
+        
+        for qua = 1 : length(weight_err)
+            % 在 quadrature point计算 shape functions 及其导数 
+            N = zeros(pp + 1,1);
+            dN_dxi = zeros(pp + 1,1);
+            for aa = 1 : pp + 1
+                N(aa) = PolyShape(pp, aa, xi_err(qua), 0);
+                dN_dxi(aa) = PolyShape(pp, aa, xi_err(qua), 1);
+            end
+            
+            % 在 quadrature point 计算其物理坐标和解
+            x_q = x_ele * N;               % (1 x 3) * (3 x 1) = scalar
+            u_h = u_ele' * N;              % (1 x 3) * (3 x 1) = scalar
+            du_h_dxi = u_ele' * dN_dxi;    % (1 x 3) * (3 x 1) = scalar
+            
+            % 计算x的导数
+            dx_dxi = x_ele * dN_dxi;       % (1 x 3) * (3 x 1) = scalar
+            du_h_dx = du_h_dxi / dx_dxi;
+            
+            % Exact solution , derivative
+            u_ex = u_exact(x_q);
+            du_ex = du_exact(x_q);
+            
+            % 计算误差
+             L2_error = L2_error + weight_err(qua) * (u_h - u_ex)^2 * dx_dxi;
+             H1_error = H1_error + weight_err(qua) * (du_h_dx - du_ex)^2 * dx_dxi;
+        end
+    end
+    
+    % 误差归一
+    % 计算 exact solution 的norms
+    L2_exact = 0.0;
+    H1_exact = 0.0;
+    
+    for ee = 1 : n_el
+        x_ele = x_coor(IEN(ee,:));    % Element coordinate
+        
+        % 使用更高阶的quadrature
+        [xi_norm, weight_norm] = Gauss(20, -1, 1); % 20-point quadrature
+        
+        for qua = 1 : length(weight_norm)
+            % 在 quadrature point计算 shape functions 及其 derivatives 
+            N = zeros(pp + 1,1);
+            dN_dxi = zeros(pp + 1,1);
+            for aa = 1 : pp + 1
+                N(aa) = PolyShape(pp, aa, xi_norm(qua), 0);
+                dN_dxi(aa) = PolyShape(pp, aa, xi_norm(qua), 1);
+            end
+            
+            % 计算坐标
+            x_q = x_ele * N;               % (1 x 3) * (3 x 1) = scalar
+            
+            % Exact solution and derivative
+            u_ex = u_exact(x_q);
+            du_ex = du_exact(x_q);
+            
+            % Compute Jacobian
+            dx_dxi = x_ele * dN_dxi;       % (1 x 3) * (3 x 1) = scalar
+            
+            % 累积exact norms
+            L2_exact = L2_exact + weight_norm(qua) * u_ex^2 * dx_dxi;
+            H1_exact = H1_exact + weight_norm(qua) * du_ex^2 * dx_dxi;
+        end
+    end
+    
+    % 前面的部分都只是数值计算，完全不需要更改，只需要把数据类型变换一下以兼容两个polynomial degrees就好
+    % 计算 relative errors，这里需要把数据类型变更一下，不然跑不动
+        L2_errors(q_idx, case_idx) = sqrt(L2_error) / sqrt(L2_exact);
+        H1_errors(q_idx, case_idx) = sqrt(H1_error) / sqrt(H1_exact);
+
+        fprintf('    Relative Errors: L2_error = %.5e, H1_error = %.5e\n', ...
+                L2_errors(q_idx, case_idx), H1_errors(q_idx, case_idx));
+end
+end
+
