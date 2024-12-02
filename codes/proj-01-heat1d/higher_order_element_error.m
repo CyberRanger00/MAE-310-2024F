@@ -228,3 +228,34 @@ for     case_idx = 1:num_cases
              pp, n_el, h, L2_errors{p_idx}(case_idx), H1_errors{p_idx}(case_idx));
 end
 end
+
+
+% 画图
+figure;
+hold on;
+markers = {'-o','-s'};
+for p_idx = 1:num_p
+    plot(h_values{p_idx}, L2_errors{p_idx}, markers{p_idx}, 'LineWidth',2,'MarkerSize',8);
+    plot(h_values{p_idx}, H1_errors{p_idx}, markers{p_idx}(1), 'LineWidth',2,'MarkerSize',8, 'MarkerFaceColor','none');
+end
+set(gca, 'XScale', 'log', 'YScale', 'log'); % 标一下变量
+xlabel('Mesh size h');
+ylabel('Relative Error');
+title('Relative L_2 and H_1 Errors vs Mesh Size for Quadratic and Cubic Elements');
+legend('L_2 Error (pp=2)','H_1 Error (pp=2)', 'L_2 Error (pp=3)','H_1 Error (pp=3)','Location','Best');
+grid on;
+hold off;
+
+% 求斜率
+for p_idx = 1:num_p
+    % Quadratic and Cubic
+    fprintf('\nPolynomial Degree: pp = %d\n', p_array(p_idx));
+    
+    % 拟合模型
+    p_L2 = polyfit(log(h_values{p_idx}), log(L2_errors{p_idx}), 1);
+    p_H1 = polyfit(log(h_values{p_idx}), log(H1_errors{p_idx}), 1);
+    
+    % 展示斜率
+    fprintf('Slope of L2 error: %.2f\n', p_L2(1));
+    fprintf('Slope of H1 error: %.2f\n', p_H1(1));
+end
