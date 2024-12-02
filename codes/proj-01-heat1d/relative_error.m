@@ -18,3 +18,25 @@ num_cases = length(n_el_array);
 L2_errors = zeros(num_cases,1);
 H1_errors = zeros(num_cases,1);
 h_values = zeros(num_cases,1);
+
+
+
+%现在我们要循环不同的number of element
+for case_idx = 1:num_cases                %这是循环的开头
+    n_el = n_el_array(case_idx);          % 当前 number of elements
+    pp = 2;                                % 多项式次数 (二次)
+    n_en = pp + 1;                         % 每个element的本地节点数量 (3)
+    n_np = n_el * pp + 1;                  % 总节点数
+    h = 1.0 / n_el;                        % Mesh size
+    h_values(case_idx) = h;                % 存储 mesh size
+    
+    % Setup the mesh
+    x_coor = linspace(0,1,n_np);           % 节点坐标
+    
+    % 定义 the IEN matrix
+    IEN = zeros(n_el, n_en);
+    for ee = 1 : n_el
+        for aa = 1 : n_en
+            IEN(ee, aa) = (ee - 1) * pp + aa;
+        end
+    end
