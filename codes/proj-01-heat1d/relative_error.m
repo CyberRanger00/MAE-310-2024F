@@ -209,3 +209,24 @@ for case_idx = 1:num_cases                %这是循环的开头
     fprintf('n_el = %d, h = %.5f, L2_error = %.5e, H1_error = %.5e\n', ...
             n_el, h, L2_errors(case_idx), H1_errors(case_idx));
 end
+
+
+% 画图
+figure;
+loglog(h_values, L2_errors, '-o','LineWidth',2,'MarkerSize',8);
+hold on;
+loglog(h_values, H1_errors, '-s','LineWidth',2,'MarkerSize',8);
+xlabel('Mesh size h');
+ylabel('Relative Error');
+title('Relative L_2 and H_1 Errors vs Mesh Size');
+legend('L_2 Error','H_1 Error','Location','Best');
+grid on;
+
+% 得到斜率
+% 拟合函数
+p_L2 = polyfit(log(h_values), log(L2_errors), 1);
+p_H1 = polyfit(log(h_values), log(H1_errors), 1);
+
+% 展示斜率
+fprintf('Slope of L2 error: %.2f\n', p_L2(1));
+fprintf('Slope of H1 error: %.2f\n', p_H1(1));
