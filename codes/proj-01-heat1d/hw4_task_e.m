@@ -5,10 +5,11 @@ clear all; clc; clf;%清理内存以及图片之类的
 u_exact = @(x) x.^5;     %定义exact solution，来源是对外源力积分两次
 du_exact = @(x) 5*x.^4;  %exact derivative 求导
 
-% 定义外源力和边界条件
+% 定义外源力和边界条件，顺便定义polynomial degree
 f = @(x) -20*x.^3; % 给的source term
 g = 1.0;           % u = g at x = 1 (Dirichlet)
 h_bc = 0.0;        % -du/dx = h at x = 0 (Neumann)
+pp = 3;
 
 % 定义要迭代的polynomial degrees
 p_array = [2, 3]; % 2: Quadratic, 3: Cubic
@@ -22,24 +23,31 @@ num_cases = length(n_el_array);
 tolerances = [1e-10, 1e-8, 1e-6];
 num_tol = length(tolerances);
 
-% 初始化cell arrays以储存误差，mesh size以及公差结果
-L2_errors = cell(num_p,1);
-H1_errors = cell(num_p,1);
-h_values = cell(num_p,1);
-GMRES_results = cell(num_p,1); % 存储公差信息
+% 初始化cell arrays以储存误差，mesh size以及公差结果，这里不再需要cell，因为不用循环polynomial degrees
+L2_errors = zeros(num_quad, num_cases);
+H1_errors = zeros(num_quad, num_cases);
+h_values = zeros(num_quad, num_cases);
+GMRES_iterations = zeros(num_quad, num_cases); % 存储公差信息
 
-%这里我们先循环每个polynomial degree
-for p_idx = 1:num_p
-    pp = p_array(p_idx);            
-    n_en = pp + 1;                     
-    L2_errors{p_idx} = zeros(num_cases,1);
-    H1_errors{p_idx} = zeros(num_cases,1);
-    h_values{p_idx} = zeros(num_cases,1);
-    GMRES_results{p_idx} = struct();   % 初始化一个struct来存储GMRE tolerance的结果
-    %这里的设置大差不差
 
-    fprintf('\nProcessing Polynomial Degree: pp = %d\n', pp);
+% 初始化存储
+GMRES_iterations = zeros(num_quad, num_cases);
 
+% 定义要进行实验的quadrature points的个数
+quad_points_array = [1, 2, 3, 4, 5, 6];
+num_quad = length(quad_points_array);
+
+% 为了画图方便，定义一下颜色和标志
+colors = {'b','g','r','c','m','k'};    
+markers = {'o','s','^','d','p','h'};   
+
+
+%这里我们先循环每个polynomial degree，好像用不着,不过留着也不影响
+%得删除，变成循环不同的quadrature point数
+for q_idx = 1:num_quad
+    n_quad = quad_points_array(q_idx); % 当前quadrature points数
+    fprintf('\n--- Quadrature Points: %d ---\n', n_quad);
+    
 
     % 这里我们循环每个number of elements，直接用前面的代码
     % 对每个number of element循环
@@ -135,4 +143,13 @@ for     case_idx = 1:num_cases
     %在x=0处应用Neumann BC
     F(ID(IEN(1,1))) = F(ID(IEN(1,1))) + h_bc;
 
-    
+    %Direct Solver(应用LU 分解的解法)
+    tic; % 开始计时
+        d_direct = K \ F; % 直接解
+        time_direct = toc; % 结束计时
+        
+        % 包含Dirichlet node的完整位移向量
+        disp_direct = [d_direct; g];
+
+     %Iterative Solver
+        
