@@ -57,27 +57,28 @@ for h_idx = 1:length(h_vals)
     error_H2(h_idx) = norm(grad2_u_approx - grad2_u_exact, 2) * h^0.5; % 近似解和参考解的H2误差
 end
 
+% 计算理论收敛速率（根据Aubin-Nitsche方法公式）
+beta_L2 = 4; % L2范数下的收敛速率
+beta_H1 = 3; % H1范数下的收敛速率
+beta_H2 = 2; % H2范数下的收敛速率
 
-% 绘制结果
+%这里需要绘制的是收敛速率
+% 绘制收敛速率
 figure;
-subplot(2,1,1);
-loglog(h_vals, error_L2(:,1), 'o-', 'DisplayName', 'L2 Error');
+loglog(h_vals, error_L2, 'o-', 'DisplayName', 'L2 Error');
 hold on;
-loglog(h_vals, error_H1(:,1), 'x-', 'DisplayName', 'H1 Error');
+loglog(h_vals, error_H1, 'x-', 'DisplayName', 'H1 Error');
+loglog(h_vals, error_H2, 's-', 'DisplayName', 'H2 Error');
 xlabel('h');
 ylabel('Error');
-title('Error Convergence in L2 and H1 norms');
+title('Error Convergence in L2, H1 and H2 norms');
 legend;
 grid on;
 
-% 计算 beta 值
-for s_idx = 1:length(s_vals)
-    beta_vals(s_idx) = min(k+1-s_vals(s_idx), 2*(k+1-m)); % 计算beta值
-end
-
-subplot(2,1,2);
-plot(s_vals, beta_vals, 's-', 'DisplayName', 'Beta Values');
-xlabel('s');
-ylabel('Beta');
-title('Beta Values for Error Estimates');
+% 绘制理论收敛速率
+hold on;
+loglog(h_vals, h_vals.^beta_L2, '--', 'DisplayName', 'L2 Theoretical Convergence');
+loglog(h_vals, h_vals.^beta_H1, '--', 'DisplayName', 'H1 Theoretical Convergence');
+loglog(h_vals, h_vals.^beta_H2, '--', 'DisplayName', 'H2 Theoretical Convergence');
+legend;
 grid on;
