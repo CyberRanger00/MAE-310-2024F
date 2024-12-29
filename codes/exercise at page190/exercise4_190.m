@@ -5,8 +5,8 @@ clear;
 close all;
 
 %首先选择问题参数
-k = 2%二次元素
-m = 1
+k = 3 % 三次Hermite形函数 (k=3)
+m = 2 % 二阶误差估计 (m=2)
 s_vals = 0:1%0<=s<=m
 beta_vals = zeros(size(s_vals))%存储beta
 
