@@ -11,3 +11,17 @@ Ny = 10;%y方向元素的数量
 %现在需要按照示例做一个生成网格的函数对吧
 %网断了，push不上去
 %好了
+
+%生成网格
+[x, y, quad_elements] = generate_quad_mesh(L, H, Nx, Ny);
+
+%将四边形变成三角形
+tri_elements = quad_to_tri(quad_elements);
+
+%现在解这个有限元问题
+num_nodes = length(x);               % Total number of nodes
+num_elements = size(elements, 1);    % Total number of elements
+K = sparse(num_nodes, num_nodes);    % Stiffness matrix
+F = zeros(num_nodes, 1);             % Load vector
+
+
