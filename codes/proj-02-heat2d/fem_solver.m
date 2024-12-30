@@ -62,5 +62,5 @@ function  [u, mesh_size] = fem_solver(x, y, elements, f)
     end
 
     mesh_size = sqrt(total_area / num_elements); % 平均element size
-
+    
 end

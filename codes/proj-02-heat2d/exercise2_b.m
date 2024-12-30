@@ -23,9 +23,10 @@ tri_elements = quad_to_tri(quad_elements);
 % 求导以计算Sobolev norms
 grad_u_exact = @(x, y) [pi*cos(pi*x).*sin(pi*y), pi*sin(pi*x).*cos(pi*y)];
 
+[e0_quad, e1_quad] = compute_error(x, y, quad_elements, u_quad, u_exact, grad_u_exact);
+[e0_tri, e1_tri] = compute_error(x, y, tri_elements, u_tri, u_exact, grad_u_exact);
 
-    display(u_quad);
-    display(quad_mesh_size);
-    display(u_tri);
-    display(tri_mesh_size);
-
+    display(e0_quad);
+    display(e1_quad);
+    display(e0_tri);
+    display(e1_tri);
