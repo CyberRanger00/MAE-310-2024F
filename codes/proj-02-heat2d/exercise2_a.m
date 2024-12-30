@@ -11,7 +11,6 @@ Ny = 10;%y方向元素的数量
 %现在需要按照示例做一个生成网格的函数对吧
 %网断了，push不上去
 %好了
-
 u_exact = @(x, y) sin(pi*x).*sin(pi*y); % Exact solution
 f = @(x, y) 2*pi^2 * sin(pi*x).*sin(pi*y); % RHS forcing function
 
@@ -21,25 +20,44 @@ f = @(x, y) 2*pi^2 * sin(pi*x).*sin(pi*y); % RHS forcing function
 %将四边形变成三角形
 tri_elements = quad_to_tri(quad_elements);
 
-%现在解这个有限元问题
-num_nodes = length(x);               % Total number of nodes
-num_elements = size(quad_elements, 1);    % Total number of elements
-K = sparse(num_nodes, num_nodes);    % Stiffness matrix
-F = zeros(num_nodes, 1);             % Load vector
+[u_quad, quad_mesh_size] = fem_solver(x, y, quad_elements, f);
+[u_tri, tri_mesh_size] = fem_solver(x, y, tri_elements, f);
 
-%循环元素组装总体的K和F
-for e = 1:num_elements
-    nodes = quad_elements(e, : );          %当前元素的node index
-    xe = x(nodes);                   %element nodes的x坐标
-    ye = y(nodes);                   %element nodes的y坐标
 
-    %计算每个元素的stiffness matrix 和 load vector
-    %首先计算三角形区域
-    A = abs(det([1, xe(1), ye(1); 1, xe(2), ye(2); 1, xe(3), ye(3)])) / 2;
+    %再计算mesh size（为了第二问的convergence analysis计算收敛元素大小）
+    %感觉写个函数做这个更好，现在先跳过这一步
+    %接下来跑两个算例吧
+    %怎么一直push失败
     
-    %基函数的梯度（对于线性三角形单元，是常数）
-    b = [ye(2) - ye(3), ye(3) - ye(1), ye(1) - ye(2)] / (2 * A);
-    c = [xe(3) - xe(2), xe(1) - xe(3), xe(2) - xe(1)] / (2 * A);
+    display(u_quad);
+    display(quad_mesh_size);
+    display(u_tri);
+    display(tri_mesh_size);
+
+    %有点愚蠢，好像这样四边形和三角形都要单独算
+    %我觉得可以把整个求解器变成一个函数
+    
+function  [u, mesh_size] = fem_solver(x, y, elements, f)
+
+    %现在解这个有限元问题
+    num_nodes = length(x);               % Total number of nodes
+    num_elements = size(elements, 1);    % Total number of elements
+    K = sparse(num_nodes, num_nodes);    % Stiffness matrix
+    F = zeros(num_nodes, 1);             % Load vecto
+
+    %循环元素组装总体的K和F
+    for e = 1:num_elements
+        nodes = elements(e, : );          %当前元素的node index
+        xe = x(nodes);                   %element nodes的x坐标
+        ye = y(nodes);                   %element nodes的y坐标
+
+       %计算每个元素的stiffness matrix 和 load vector
+       %首先计算三角形区域
+        A = abs(det([1, xe(1), ye(1); 1, xe(2), ye(2); 1, xe(3), ye(3)])) / 2;
+    
+        %基函数的梯度（对于线性三角形单元，是常数）
+        b = [ye(2) - ye(3), ye(3) - ye(1), ye(1) - ye(2)] / (2 * A);
+        c = [xe(3) - xe(2), xe(1) - xe(3), xe(2) - xe(1)] / (2 * A);
     
     %元素的stiffness matrix
     Ke = A * (b' * b + c' * c);
@@ -55,13 +73,13 @@ for e = 1:num_elements
     end
 
     %将每个元素累加到global stiffness matrix和load vector里
-    for i = 1:3 % 三角形，三个nodes
-            for j = 1:3
-                K(nodes(i), nodes(j)) = K(nodes(i), nodes(j)) + Ke(i, j);
-            end
-            F(nodes(i)) = F(nodes(i)) + Fe(i); % 加上去
+       for i = 1:3 % 三角形，三个nodes
+              for j = 1:3
+                  K(nodes(i), nodes(j)) = K(nodes(i), nodes(j)) + Ke(i, j);
+              end
+               F(nodes(i)) = F(nodes(i)) + Fe(i); % 加上去
+        end
     end
-end
      
     %Dirchlet BC（边界上u = 0）
     boundary_nodes = find(x == 0 | x == max(x) | y == 0 | y == max(y));
@@ -71,12 +89,17 @@ end
 
     %解Ku = F
     u = K \ F;
-    
-    %再计算mesh size（为了第二问的convergence analysis计算收敛元素大小）
-    %感觉写个函数做这个更好，现在先跳过这一步
-    %接下来跑两个算例吧
-    %怎么一直push失败
 
-    display(u);
-    
+    num_elements = size(elements, 1);
+    total_area = 0;
 
+    for e = 1:num_elements
+        nodes = elements(e, :);
+        xe = x(nodes);
+        ye = y(nodes);
+        total_area = total_area + polyarea(xe, ye);
+    end
+
+    mesh_size = sqrt(total_area / num_elements); % 平均element size
+
+end
