@@ -12,6 +12,9 @@ Ny = 10;%y方向元素的数量
 %网断了，push不上去
 %好了
 
+u_exact = @(x, y) sin(pi*x).*sin(pi*y); % Exact solution
+f = @(x, y) 2*pi^2 * sin(pi*x).*sin(pi*y); % RHS forcing function
+
 %生成网格
 [x, y, quad_elements] = generate_quad_mesh(L, H, Nx, Ny);
 
@@ -20,13 +23,13 @@ tri_elements = quad_to_tri(quad_elements);
 
 %现在解这个有限元问题
 num_nodes = length(x);               % Total number of nodes
-num_elements = size(elements, 1);    % Total number of elements
+num_elements = size(quad_elements, 1);    % Total number of elements
 K = sparse(num_nodes, num_nodes);    % Stiffness matrix
 F = zeros(num_nodes, 1);             % Load vector
 
 %循环元素组装总体的K和F
 for e = 1:num_elements
-    nodes = element(e, : );          %当前元素的node index
+    nodes = quad_elements(e, : );          %当前元素的node index
     xe = x(nodes);                   %element nodes的x坐标
     ye = y(nodes);                   %element nodes的y坐标
 
@@ -73,4 +76,7 @@ end
     %感觉写个函数做这个更好，现在先跳过这一步
     %接下来跑两个算例吧
     %怎么一直push失败
+
+    display(u);
     
+
