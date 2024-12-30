@@ -72,3 +72,5 @@ end
     %再计算mesh size（为了第二问的convergence analysis计算收敛元素大小）
     %感觉写个函数做这个更好，现在先跳过这一步
     %接下来跑两个算例吧
+    %怎么一直push失败
+    
