@@ -42,11 +42,15 @@ function [coords, ien] = readGmsh(filename)
                 end
             end
             if isElementSection
-                data = sscanf(line, '%d %d %d %d %d %d %d %d');% 解析单元数据行
+                data = sscanf(line, '%d %d %d %d %d %d %d %d'); % 解析单元数据行
                 if numel(data) >= 5 && data(2) == 2 % 检查是否为二维单元(type=2)
                     ien(end + 1, :) = data(6:8); % 存储单元的三个节点编号
                 end
             end
 
-        end
+        ien = ien(any(ien, 2), :); % 移除空行
+        fclose(fid); % 关闭文件
+    catch
+        fclose('all'); % 发生错误时关闭所有打开的文件
+        warning('Failed to read mesh data.'); % 发出警告
     end
