@@ -47,7 +47,7 @@ function [coords, ien] = readGmsh(filename)
                     ien(end + 1, :) = data(6:8); % 存储单元的三个节点编号
                 end
             end
-
+        end
         ien = ien(any(ien, 2), :); % 移除空行
         fclose(fid); % 关闭文件
     catch
