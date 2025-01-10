@@ -23,4 +23,20 @@ end
 K = assembleStiffness(coords, ien, E, nu, planeStress);
 
 %应用BC
+[dispBC, forceBC] = defineBoundaryConditions(coords, traction, radius, sideLength);
+[K_mod, F] = applyBoundaryConditions(K, dispBC, forceBC);
 
+figure(1);
+surf(dispBC);
+title('DISPBC');
+
+figure(2);
+surf(forceBC);
+title('forceBC');
+
+% 解位移
+U = K_mod \ F;
+
+figure(3);
+disp(U);
+title('U');
