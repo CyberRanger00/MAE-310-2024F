@@ -37,6 +37,11 @@ title('forceBC');
 % 解位移
 U = K_mod \ F;
 
-figure(3);
+
 disp(U);
 title('U');
+
+%后处理
+[stress, strain] = postProcess(coords, ien, U, E, nu, planeStress);
+figure(3);
+surf([stress,strain]);
