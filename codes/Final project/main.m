@@ -22,6 +22,8 @@ end
 % 组装刚度矩阵
 K = assembleStiffness(coords, ien, E, nu, planeStress);
 
-contour(K);
+%先测试一下
+
+surf(K);
 colorbar;
 
