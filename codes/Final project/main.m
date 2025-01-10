@@ -22,8 +22,5 @@ end
 % 组装刚度矩阵
 K = assembleStiffness(coords, ien, E, nu, planeStress);
 
-%先测试一下
-
-contour(K);
-colorbar;
+%应用BC
 
