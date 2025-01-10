@@ -9,6 +9,7 @@ function [coords, ien] = readGmsh(filename)
 
         while ~feof(fid)
             line = fgetl(fid);
+            %阅读node
             if contains(line, '$Nodes')
                 isNodeSection = true;
                 numNodes = str2double(fgetl(fid));
@@ -19,5 +20,33 @@ function [coords, ien] = readGmsh(filename)
                 isNodeSection = false;
                 continue;
             end
+      
+        %end
+        %阅读element
+            if contains(line, '$Elements')
+                isElementSection = true;
+                numElements = str2double(fgetl(fid));
+                ien = zeros(numElements, 3);
+                continue;
+            end
+            if contains(line, '$EndElements')
+                isElementSection = false;
+                continue;
+            end
+         %end
+         %阅读
+            if isNodeSection
+                data = sscanf(line, '%d %f %f %f');% 解析节点数据行
+                if numel(data) == 4
+                    coords(data(1), :) = data(2:4);% 存储节点坐标 (x,y,z)
+                end
+            end
+            if isElementSection
+                data = sscanf(line, '%d %d %d %d %d %d %d %d');% 解析单元数据行
+                if numel(data) >= 5 && data(2) == 2 % 检查是否为二维单元(type=2)
+                    ien(end + 1, :) = data(6:8); % 存储单元的三个节点编号
+                end
+            end
+
         end
     end
