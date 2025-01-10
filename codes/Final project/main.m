@@ -1,4 +1,4 @@
-% 平面弹性问题分析
+%平面弹性问题分析
 clc;clear;close all;
 
 %参数设置
@@ -19,19 +19,21 @@ end
 
 %现在就要解有限元问题了
 
-% 组装刚度矩阵
+%组装刚度矩阵
 K = assembleStiffness(coords, ien, E, nu, planeStress);
 
 %应用BC
 [dispBC, forceBC] = defineBoundaryConditions(coords, traction, radius, sideLength);
 [K_mod, F] = applyBoundaryConditions(K, dispBC, forceBC);
 
-% 解位移
+%解位移
 U = K_mod \ F;
 
 %后处理
 [stress, strain] = postProcess(coords, ien, U, E, nu, planeStress);
 
 % Visualization
+figure;
 visualizeDisplacement(coords, ien, U);
+figure;
 visualizeStress(coords, ien, stress);

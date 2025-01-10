@@ -3,7 +3,6 @@ function visualizeDisplacement(coords, ien, U)
 %coords: 节点坐标矩阵
 %ien: 单元节点连接关系矩阵
 %U: 节点位移
-    figure();
     %检查位移向量长度是否为偶数
     if mod(length(U), 2) ~= 0
         error('Length of U must be even.');
