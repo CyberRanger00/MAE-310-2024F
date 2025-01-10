@@ -17,5 +17,11 @@ if isempty(coords) || isempty(ien)
     error('Mesh data could not be loaded. Check the Gmsh file and path.');
 end
 
+%现在就要解有限元问题了
 
+% 组装刚度矩阵
+K = assembleStiffness(coords, ien, E, nu, planeStress);
+
+contour(K);
+colorbar;
 
