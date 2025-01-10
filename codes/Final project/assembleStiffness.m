@@ -11,5 +11,6 @@ function K = assembleStiffness(coords, ien, E, nu, planeStress)
         end
         %这里先留两个函数
         Ke = elementStiffness(coords(nodes, :), E, nu, planeStress); % 计算单元刚度矩阵
+        K = assembleGlobalMatrix(K, Ke, nodes); % 将单元刚度矩阵装配到全局矩阵
     end
 end

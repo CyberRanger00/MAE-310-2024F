@@ -24,6 +24,6 @@ K = assembleStiffness(coords, ien, E, nu, planeStress);
 
 %先测试一下
 
-surf(K);
+contour(K);
 colorbar;
 
