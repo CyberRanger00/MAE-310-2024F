@@ -29,25 +29,26 @@ traction = 10e3;    %load traction
         [K_mod, F] = applyBoundaryConditions(K, dispBC, forceBC);
         U = K_mod \ F;
         [stressNumerical, strainNumerical] = postProcess(coords, ien, U, E, nu, planeStress);
-
+        
         %计算误差
         stressAnalytical = computeAnalyticalStress(coords, radius, traction);
         [L2Errors(i), H1Errors(i)] = computeError(coords, ien, stressNumerical, stressAnalytical);
 
         %记录单元大小
         elementSizes(i) = meshSize;
+    
+        % 输出当前迭代的结果
+        fprintf('Iteration %d: mesh size = %.4f, L2 error = %.4e, H1 error = %.4e\n', ...
+            i, meshSize, L2Errors(i), H1Errors(i));
     end
 
 % Visualization
 figure;
 visualizeDisplacement(coords, ien, U);
-saveas(gcf, 'DisplacementVisualization.png');
 figure;
 visualizeStress(coords, ien, stressNumerical);
-saveas(gcf, 'StressVisualization.png');
 figure;
 visualizeStrain(coords, ien, strainNumerical);
-saveas(gcf, 'StrainVisualization.png');
 
 disp(L2Errors);
 disp(H1Errors);
@@ -62,4 +63,3 @@ ylabel('Error');
 title('Convergence Analysis');
 legend;
 grid on;
-saveas(gcf, 'Convergence Analysis.png');

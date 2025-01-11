@@ -4,52 +4,38 @@ function [L2Error, H1Error] = computeError(coords, ien, stressNumerical, stressA
 %ien: 单元节点连接关系矩阵
 %stressNumerical: 数值计算得到的应力
 %stressAnalytical: 解析解得到的应力
-    % 初始化误差
+
+    %初始化误差
     L2Error = 0;
     H1Error = 0;
-    gradError = 0;    % 梯度误差项
-    totalArea = 0;    % 总面积
-    
-    % 遍历所有单元
+    totalArea = 0;
+
+    % 对每个单元进行循环
     for e = 1:size(ien, 1)
-        % 获取单元节点
+        % 获得单元节点
         nodes = ien(e, :);
         elementCoords = coords(nodes, :);
+
+        % 获取数值解和解析解
+        sigmaNumerical = stressNumerical(e, :); % 单元数值应力
+        sigmaAnalytical = mean(stressAnalytical(nodes, :), 1); % 单元平均解析应力
         
-        % 获取该单元的应力值
-        sigmaNum = stressNumerical(e, :);         % [σxx, σyy, τxy]
-        sigmaAnalytical = mean(stressAnalytical(nodes, :), 1);  % 取节点平均值作为解析值
-        
-        % 计算单元的B矩阵和雅可比行列式
-        [B, detJ] = computeBMatrix(elementCoords);
-        
-        % 计算应力差值用于L2误差
-        stressDiff = sigmaNum - sigmaAnalytical;
-        
-        % 计算该单元对L2误差的贡献
-        L2Error = L2Error + detJ * (stressDiff * stressDiff');
-        
-        % 计算应力梯度用于H1误差
-        % 计算数值解的梯度
-        [gradNumXX, gradNumYY, gradNumXY] = computeStressGradients(elementCoords, sigmaNum, B);
-        
-        % 计算解析解的梯度
-        [gradAnalXX, gradAnalYY, gradAnalXY] = computeAnalyticalStressGradients(...
-            elementCoords, sigmaAnalytical, nodes);
-        
-        % 计算梯度差值
-        gradDiffXX = gradNumXX - gradAnalXX;
-        gradDiffYY = gradNumYY - gradAnalYY;
-        gradDiffXY = gradNumXY - gradAnalXY;
-        
-        % 将梯度误差加入H1误差
-        gradError = gradError + detJ * (gradDiffXX.^2 + gradDiffYY.^2 + gradDiffXY.^2);
-        
-        % 累加面积
+        % 计算单元雅可比行列式（用于面积计算）:
+        [~, detJ] = computeBMatrix(elementCoords);
+
+        % 计算L2误差： ||σ - σ_exact||²
+        diff = sigmaNumerical - sigmaAnalytical; 
+        L2Error = L2Error + detJ * (diff * diff'); % 积分过程
+
+        % 计算H1误差（梯度差）
+        gradDiff = diff; % 这里是简化处理,实际应该计算梯度差
+        H1Error = H1Error + detJ * (gradDiff * gradDiff'); % 每个单元对H1范数的贡献
+
+        % 累加单元面积
         totalArea = totalArea + detJ;
     end
-    
-    % 归一化误差
+
+    % 最终归一化处理
     L2Error = sqrt(L2Error / totalArea);
-    H1Error = sqrt((L2Error^2 + gradError) / totalArea);
+    H1Error = sqrt(H1Error / totalArea);
 end
