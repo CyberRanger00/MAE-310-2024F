@@ -22,10 +22,15 @@ function [stress, strain] = postProcess(coords, ien, U, E, nu, planeStress)
     %对每个单元进行循环计算
     for e = 1:numElements
         nodes = ien(e, :); % 获取当前单元的节点编号
-        Ue = U([2 * nodes - 1, 2 * nodes]);% 提取单元节点位移
+        nodeCoords = coords(nodes, :);
+        Ue = zeros(6, 1);% 提取单元节点位移
+        for i = 1:3
+            Ue(2*i-1) = U(2*nodes(i)-1);  % x 位移
+            Ue(2*i) = U(2*nodes(i));      % y 位移
+        end
         Ue = Ue(:); % % 确保位移向量是列向量
         %计算应变-位移矩阵B:
-        [B, detJ] = computeBMatrix(coords(nodes, :));
+        [B, detJ] = computeBMatrix(nodeCoords)
         %对每个单元进行循环计算
         strain(e, :) = B * Ue;% 计算应变ε = B * Ue
         stress(e) = C(1, :) * strain(e, :)';% 计算应力σ = C * ε

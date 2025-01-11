@@ -18,6 +18,7 @@ traction = 10e3;    %load traction
     for i = 1:numRefinements
         %网格加密循环
         meshSize = sideLength / (2^(i + 1)); % 网格尺寸逐次减半
+        refineHole = meshSize / 4 %细化孔附近的网格
         %生成和读取网格
         generateGeoFile('geometry.geo', radius, sideLength, meshSize);
         system(sprintf('gmsh geometry.geo -2 -format msh2 -o geometry.msh -clmax %.2f', meshSize));
