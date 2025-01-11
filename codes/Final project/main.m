@@ -31,10 +31,15 @@ K = assembleStiffness(coords, ien, E, nu, planeStress);
 U = K_mod \ F;
 
 %后处理
-[stress, strain] = postProcess(coords, ien, U, E, nu, planeStress);
+[stressNumerical, strainNumerical] = postProcess(coords, ien, U, E, nu, planeStress);
 
 % Visualization
 figure;
 visualizeDisplacement(coords, ien, U);
+saveas(gcf, 'DisplacementVisualization.png');
 figure;
-visualizeStress(coords, ien, stress);
+visualizeStress(coords, ien, stressNumerical);
+saveas(gcf, 'StressVisualization.png');
+figure;
+visualizeStrain(coords, ien, strainNumerical);
+saveas(gcf, 'StrainVisualization.png');

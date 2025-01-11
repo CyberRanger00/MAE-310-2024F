@@ -13,6 +13,5 @@ function visualizeStress(coords, ien, stress)
     colorbar;% 添加颜色条
     title('Stress Visualization (\sigma_{xx})');
     xlabel('X'); ylabel('Y'); zlabel('Z');
-    view(2); % 设置为俯视图
     axis equal;% 保持坐标轴等比例
 end
