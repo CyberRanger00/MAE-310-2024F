@@ -45,13 +45,15 @@ traction = 10e3;    %load traction
 % Visualization
 figure;
 visualizeDisplacement(coords, ien, U);
+saveas(gcf, 'DisplacementVisualization.png');
 figure;
 visualizeStress(coords, ien, stressNumerical);
+saveas(gcf, 'StressVisualization.png');
 figure;
 visualizeStrain(coords, ien, strainNumerical);
-
-disp(L2Errors);
-disp(H1Errors);
+saveas(gcf, 'StrainVisualization.png');
+disp(strainNumerical);
+disp(stressNumerical);
 
 %绘制收敛性曲线
 figure;
@@ -63,3 +65,4 @@ ylabel('Error');
 title('Convergence Analysis');
 legend;
 grid on;
+saveas(gcf, 'Error and Convergence Analysis.png');
