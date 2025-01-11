@@ -1,40 +1,64 @@
-% 计算误差
 function [L2Error, H1Error] = computeError(coords, ien, stressNumerical, stressAnalytical)
-%coords: 节点坐标矩阵
-%ien: 单元节点连接关系矩阵
-%stressNumerical: 数值计算得到的应力
-%stressAnalytical: 解析解得到的应力
-
-    %初始化误差
+    % 初始化误差
     L2Error = 0;
     H1Error = 0;
     totalArea = 0;
-
+    
     % 对每个单元进行循环
     for e = 1:size(ien, 1)
         % 获得单元节点
         nodes = ien(e, :);
         elementCoords = coords(nodes, :);
-
-        % 获取数值解和解析解
-        sigmaNumerical = stressNumerical(e, :); % 单元数值应力
-        sigmaAnalytical = mean(stressAnalytical(nodes, :), 1); % 单元平均解析应力
         
-        % 计算单元雅可比行列式（用于面积计算）:
-        [~, detJ] = computeBMatrix(elementCoords);
-
-        % 计算L2误差： ||σ - σ_exact||²
-        diff = sigmaNumerical - sigmaAnalytical; 
-        L2Error = L2Error + detJ * (diff * diff'); % 积分过程
-
-        % 计算H1误差（梯度差）
-        gradDiff = diff; % 这里是简化处理,实际应该计算梯度差
-        H1Error = H1Error + detJ * (gradDiff * gradDiff'); % 每个单元对H1范数的贡献
-
+        % 先检查应力向量的维度
+        numStressComponents = size(stressNumerical, 2);  % 获取实际的应力分量数
+        
+        % 获取数值解和解析解
+        sigmaNumerical = stressNumerical(e, :);     % 获取当前单元的数值应力
+        sigmaAnalytical = mean(stressAnalytical(nodes, :), 1);  % 平均节点值
+        
+        % 计算B矩阵和雅可比行列式
+        [B, detJ] = computeBMatrix(elementCoords);  % B矩阵大小为 3x6
+        
+        % 计算L2误差
+        diff = sigmaNumerical - sigmaAnalytical;
+        L2Error = L2Error + detJ * (diff * diff');
+        
+        % 提取B矩阵的导数行
+        dNdx = B(1,:);  % x方向导数 1x6
+        dNdy = B(2,:);  % y方向导数 1x6
+        
+        % 为每个应力分量计算梯度
+        gradNumerical = [];  % 动态大小，根据应力分量数确定
+        gradAnalytical = [];
+        
+        % 对每个应力分量分别计算x和y方向的梯度
+        for i = 1:numStressComponents
+            % 创建形函数向量
+            N = [sigmaNumerical(i); sigmaNumerical(i); sigmaNumerical(i); 0; 0; 0];
+            NA = [sigmaAnalytical(i); sigmaAnalytical(i); sigmaAnalytical(i); 0; 0; 0];
+            
+            % 计算数值解梯度
+            gradNumerical = [gradNumerical; 
+                           dNdx * N;    % x方向导数
+                           dNdy * N];   % y方向导数
+                           
+            % 计算解析解梯度
+            gradAnalytical = [gradAnalytical;
+                            dNdx * NA;   % x方向导数
+                            dNdy * NA];  % y方向导数
+        end
+        
+        % 计算梯度差
+        gradDiff = gradNumerical - gradAnalytical;
+        
+        % 计算H1误差
+        H1Error = H1Error + detJ * (diff * diff' + gradDiff' * gradDiff);
+        
         % 累加单元面积
         totalArea = totalArea + detJ;
     end
-
+    
     % 最终归一化处理
     L2Error = sqrt(L2Error / totalArea);
     H1Error = sqrt(H1Error / totalArea);
